@@ -15,54 +15,70 @@ logger = logging.getLogger(__name__)
 
 PORT = int(os.environ.get('PORT', '8443'))
 
-global claims
-claims = []
+global chats
+chats = {}
 
 # Ordinary commands to appear in telegram
 def start(update, context):
-    global claims
-    claims = []
+    global chats
+
+    chat_id = update.message.chat.id
+    logging.info(chat_id)
+    chats[chat_id] = []
+
     general_message(update)
 
 def new(update, context):
+    global chats
+
     args = context.args
+    chat_id = update.message.chat.id
+
     if len(args) != 2:
         send_reply(update, "Please create new claim in the form of <NAME> <AMT>")
     else:
         if(is_number(args[1]) and float(args[1]) > 0):
             claim = Claim(args[0], args[1], date.today())
-            claims.append(claim)
+            chats[chat_id].append(claim)
             send_reply(update, "Ok, claim amount of *$" + args[1] + "* for *" + args[0]  + "* has been created")
         else:
             send_reply(update, "Please enter a valid amount more than $0")
 
 def get(update, context):
+    chat_id = update.message.chat.id
+
     msg = ""
     index = 1
 
-    for c in claims:
+    for c in chats[chat_id]:
         msg += str(index) + ". " + c.name + " (" + c.date.strftime("%d/%m/%Y") + ") - $" + str(c.amount) + "\n"
         index += 1 
 
-    header_msg = "You have " + str(len(claims)) + " open claim(s). \n\n"        
+    header_msg = "You have " + str(len(chats[chat_id])) + " open claim(s). \n\n"        
     send_reply(update, header_msg + msg)
     
 def close(update, context):
+    global chats
+    chat_id = update.message.chat.id
+
     args = context.args
     if len(args) != 1:
         send_reply(update, "Please enter the index of the claim you wish to close")
     else:
         index = int(args[0])
-        if valid_range(index):
-            c = claims.pop(index - 1)
+        if valid_range(index, chats[chat_id]):
+            c = chats[chat_id].pop(index - 1)
             send_reply(update, "You have closed a claim of *$" + c.amount + "*")
             get(update, context)
         else:
             send_reply(update, "Invalid claim index. Please check available claims using /list")
 
 def restart(update, context):
-    global claims
-    claims = []
+    global chats
+    chat_id = update.message.chat.id
+    
+    chats[chat_id] = []
+
     send_reply(update, "I have cleared all claims")
 
 
@@ -77,8 +93,8 @@ def is_number(s):
     except ValueError:
         return False
 
-def valid_range(value):
-    length = len(claims)
+def valid_range(value, lst):
+    length = len(lst)
     if value >= 1 and value <= length:
         return True
     else:
