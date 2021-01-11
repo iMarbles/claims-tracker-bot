@@ -14,6 +14,9 @@ Activate venv:
 Install packages:
 `pip install -r requirements.txt`
 
+Setup environment variables:
+Create `credentials.py` from `credentials_template.py` with appropriate values.
+
 # Update Package List
 
 Add new packages:
@@ -21,3 +24,7 @@ Add new packages:
 
 Then record environment's current package list:
 `pip freeze > requirements.txt`
+
+# VS Code
+
+Open `claims-tracker.code-workspace` workspace file for linting and autoformatting
