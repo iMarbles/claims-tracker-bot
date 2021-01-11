@@ -28,19 +28,22 @@ def start(update, context):
 
     general_message(update)
 
-def new(update, context):
+def add(update, context):
     global chats
 
     args = context.args
     chat_id = update.message.chat.id
 
-    if len(args) != 2:
+    if len(args) < 2:
         send_reply(update, "Please create new claim in the form of <NAME> <AMT>")
     else:
-        if(is_number(args[1]) and float(args[1]) > 0):
-            claim = Claim(args[0], args[1], date.today())
+        last_index = len(args)
+        if(is_number(args[last_index - 1]) and float(args[last_index - 1]) > 0):
+            claim_name = " ".join(args[:last_index - 1])
+            claim_amt = float(args[last_index - 1])
+            claim = Claim(claim_name, claim_amt, date.today())
             chats[chat_id].append(claim)
-            send_reply(update, "Ok, claim amount of *$" + args[1] + "* for *" + args[0]  + "* has been created")
+            send_reply(update, "Ok, claim amount of *$" + get_currency(claim_amt) + "* for *" + claim_name + "* has been created")
         else:
             send_reply(update, "Please enter a valid amount more than $0")
 
@@ -51,7 +54,7 @@ def get(update, context):
     index = 1
 
     for c in chats[chat_id]:
-        msg += str(index) + ". " + c.name + " (" + c.date.strftime("%d/%m/%Y") + ") - $" + str(c.amount) + "\n"
+        msg += str(index) + ". " + c.name + " (" + c.date.strftime("%d/%m/%Y") + ") - $" + get_currency(c.amount) + "\n"
         index += 1 
 
     header_msg = "You have " + str(len(chats[chat_id])) + " open claim(s). \n\n"        
@@ -68,7 +71,7 @@ def close(update, context):
         index = int(args[0])
         if valid_range(index, chats[chat_id]):
             c = chats[chat_id].pop(index - 1)
-            send_reply(update, "You have closed a claim of *$" + c.amount + "*")
+            send_reply(update, "You have closed a claim of *$" + get_currency(c.amount) + "*")
             get(update, context)
         else:
             send_reply(update, "Invalid claim index. Please check available claims using /list")
@@ -100,9 +103,12 @@ def valid_range(value, lst):
     else:
         return False
 
+def get_currency(amt):
+    return "{0:,.2f}".format(amt)
+
 # Others
 def general_message(update):
-    send_reply(update, 'Hello, welcome to the Claims Tracker Bot! \nYou can use me to keep track of any claims you may have~ \n\nStart by making a new claim with /new')
+    send_reply(update, 'Hello, welcome to the Claims Tracker Bot! \nYou can use me to keep track of any claims you may have~ \n\nStart by making a new claim with /add')
 
 def error(update, context):
     """Log Errors caused by Updates."""
@@ -121,7 +127,7 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("new", new, pass_args=True))
+    dp.add_handler(CommandHandler("add", add, pass_args=True))
     dp.add_handler(CommandHandler("list", get))
     dp.add_handler(CommandHandler("close", close, pass_args=True))
     dp.add_handler(CommandHandler("restart", restart))
@@ -143,4 +149,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main() 
