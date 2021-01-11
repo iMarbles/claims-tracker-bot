@@ -2,7 +2,10 @@ import logging
 import os
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from datetime import date
+
 from credentials import TOKEN, URL
+from claim import *
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -11,28 +14,84 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 PORT = int(os.environ.get('PORT', '8443'))
-# Define a few command handlers. These usually take the two arguments update and
-# context. Error handlers also receive the raised TelegramError object in error.
 
+global claims
+claims = []
+
+# Ordinary commands to appear in telegram
 def start(update, context):
-    """Send a message when the command /start is issued."""
-    update.message.reply_text('Hi!')
+    global claims
+    claims = []
+    general_message(update)
+
+def new(update, context):
+    args = context.args
+    if len(args) != 2:
+        send_reply(update, "Please create new claim in the form of <NAME> <AMT>")
+    else:
+        if(is_number(args[1]) and float(args[1]) > 0):
+            claim = Claim(args[0], args[1], date.today())
+            claims.append(claim)
+            send_reply(update, "Ok, claim amount of *$" + args[1] + "* for *" + args[0]  + "* has been created")
+        else:
+            send_reply(update, "Please enter a valid amount more than $0")
+
+def get(update, context):
+    msg = ""
+    index = 1
+
+    for c in claims:
+        msg += str(index) + ". " + c.name + " (" + c.date.strftime("%d/%m/%Y") + ") - $" + str(c.amount) + "\n"
+        index += 1 
+
+    header_msg = "You have " + str(len(claims)) + " open claim(s). \n\n"        
+    send_reply(update, header_msg + msg)
+    
+def close(update, context):
+    args = context.args
+    if len(args) != 1:
+        send_reply(update, "Please enter the index of the claim you wish to close")
+    else:
+        index = int(args[0])
+        if valid_range(index):
+            c = claims.pop(index - 1)
+            send_reply(update, "You have closed a claim of *$" + c.amount + "*")
+            get(update, context)
+        else:
+            send_reply(update, "Invalid claim index. Please check available claims using /list")
+
+def restart(update, context):
+    global claims
+    claims = []
+    send_reply(update, "I have cleared all claims")
 
 
-def help(update, context):
-    """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
+# Helper methods    
+def send_reply(update, msg):
+    update.message.reply_text(msg, parse_mode= 'Markdown')
 
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
-def echo(update, context):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+def valid_range(value):
+    length = len(claims)
+    if value >= 1 and value <= length:
+        return True
+    else:
+        return False
 
+# Others
+def general_message(update):
+    send_reply(update, 'Hello, welcome to the Claims Tracker Bot! \nYou can use me to keep track of any claims you may have~ \n\nStart by making a new claim with /new')
 
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
-
+    command = 0
 
 def main():
     """Start the bot."""
@@ -46,10 +105,13 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("new", new, pass_args=True))
+    dp.add_handler(CommandHandler("list", get))
+    dp.add_handler(CommandHandler("close", close, pass_args=True))
+    dp.add_handler(CommandHandler("restart", restart))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
+    #dp.add_handler(MessageHandler(Filters.text, handle_commands))
 
     # log all errors
     dp.add_error_handler(error)
