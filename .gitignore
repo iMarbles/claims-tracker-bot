@@ -3,6 +3,7 @@ __pycache__/
 
 # venv
 venv/
+botenv/
 
-/botenv
+# Credentials
 credentials.py
