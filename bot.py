@@ -1,7 +1,7 @@
 import logging
 import os
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler
 from datetime import date
 
 from credentials import TOKEN, URL
@@ -20,8 +20,6 @@ global chats
 chats = {}
 
 # Ordinary commands to appear in telegram
-
-
 def start(update, context):
     global chats
 
@@ -138,8 +136,6 @@ def get_currency(amt):
 
 
 # Others
-
-
 def general_message(update):
     send_reply(
         update,
@@ -150,7 +146,6 @@ def general_message(update):
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
-    command = 0
 
 
 def main():
